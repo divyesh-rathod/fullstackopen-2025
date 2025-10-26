@@ -16,78 +16,74 @@ const Filter = ({ search, setSearch }) => {
   );
 };
 
-const PersonForm = ({ persons,setErrorMessage }) => {
+const PersonForm = ({ persons, setPersons, setNotice }) => {
   const [newName, setNewName] = useState("");
   const [number, setNewNumber] = useState("");
-  
 
   const handleAddNames = (e) => {
     e.preventDefault();
-    const object = {
-      name: newName,
-      number,
-    };
-    let ifpresent = persons.find((name) => name.name === newName);
-    if (ifpresent) {
-      let currentPerson = persons.find((name) => name.name === newName);
-      console.log(currentPerson.name)
+
+    const object = { name: newName, number };
+    const existing = persons.find((p) => p.name === newName);
+
+    if (existing) {
       if (
         window.confirm(
-          `${currentPerson.name} is already added to phone book replace the old number with the new one ?`
+          `${existing.name} is already added to phonebook. Replace the old number with the new one?`
         )
       ) {
+        const updated = { ...existing, number };
+
         apis
-          .UpdateName(currentPerson)
-          .then((e) => {
-            setErrorMessage(
-              `Updated Phone number of ${object.name} to ${object.number}`
+          .UpdateName(updated)
+          .then((resp) => {
+            // update local list (optional; depends on your API)
+            setPersons((prev) =>
+              prev.map((p) => (p.id === updated.id ? resp.data : p))
             );
-            setTimeout(() => {
-              setErrorMessage(null);
-            }, 5000);
+            setNotice({
+              type: "success",
+              text: `Updated phone number of ${updated.name} to ${updated.number}`,
+            });
           })
-          .catch((e) => {
-            console.log(e);
+          .catch((err) => {
+            const msg = err.response?.data?.error || "Update failed";
+            setNotice({ type: "error", text: msg });
+          })
+          .finally(() => {
+            setTimeout(() => setNotice(null), 5000);
           });
-      } else {
-        alert(`Phone number is not updated`);
       }
-    }
-    else {
-      apis.Add(object)
-        .then((e) => {
-           setErrorMessage(
-             `Added ${object.name}`
-           );
-            setTimeout(() => {
-              setErrorMessage(null);
-            }, 5000);
+    } else {
+      apis
+        .Add(object)
+        .then((resp) => {
+          setPersons((prev) => prev.concat(resp.data));
+          setNotice({ type: "success", text: `Added ${object.name}` });
         })
-        .catch((e) => { console.log(e) });
+        .catch((err) => {
+          const msg = err.response?.data?.error || "Create failed";
+          console.log("reached here in catch")
+          setNotice({ type: "error", text: msg });
+        })
+        .finally(() => {
+          setTimeout(() => setNotice(null), 5000);
+        });
     }
-    
+
     setNewName("");
     setNewNumber("");
   };
+
   return (
     <form onSubmit={handleAddNames}>
       <div>
         name:{" "}
-        <input
-          value={newName}
-          onChange={(e) => {
-            setNewName(e.target.value);
-          }}
-        />
+        <input value={newName} onChange={(e) => setNewName(e.target.value)} />
       </div>
       <div>
         phonenumber:{" "}
-        <input
-          value={number}
-          onChange={(e) => {
-            setNewNumber(e.target.value);
-          }}
-        />
+        <input value={number} onChange={(e) => setNewNumber(e.target.value)} />
       </div>
       <div>
         <button type="submit">add</button>
@@ -95,6 +91,7 @@ const PersonForm = ({ persons,setErrorMessage }) => {
     </form>
   );
 };
+
 
 const Persons = ({ persons, search, }) => {
   const visible = persons.filter((p) =>
@@ -140,17 +137,20 @@ const Persons = ({ persons, search, }) => {
     
 };
 
-const Notification = ({ message }) => {
-  if (message === null) {
-    return null;
-  }
+const Notification = ({ notice }) => {
+  if (!notice) return null; // null, undefined, '' -> nothing
 
-  return <div className="error">{message}</div>;
+  const { type, text } = notice; // type: 'success' | 'error'
+  return (
+    <div className={`notification ${type}`} role="status" aria-live="polite">
+      {text}
+    </div>
+  );
 };
 
 const App = () => {
   const [persons, setPersons] = useState([]);
-  const [errorMessage, setErrorMessage] = useState("");
+   const [notice, setNotice] = useState(null); 
 
   
   useEffect(() => {
@@ -158,6 +158,7 @@ const App = () => {
       setPersons(e.data)
     })
       .catch((e) => {
+       setNotice({ type: "error", text: "Failed to load people" });
         console.log(e)
     })
     
@@ -168,12 +169,16 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
-      <Notification message={errorMessage} />
+      <Notification notice={notice} />
 
       <Filter search={search} setSearch={setSearch} />
 
       <br />
-      <PersonForm setPersons={setPersons} persons={persons} setErrorMessage={setErrorMessage} />
+      <PersonForm
+        setPersons={setPersons}
+        persons={persons}
+        setNotice={setNotice}
+      />
       <h2>Numbers</h2>
       <Persons persons={persons} search={search} />
     </div>
