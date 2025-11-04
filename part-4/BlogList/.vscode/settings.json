@@ -1,0 +1,20 @@
+{
+  // Enable auto-save
+  "files.autoSave": "afterDelay",       // or "onWindowChange"
+  "files.autoSaveDelay": 1000,          // ms before saving (optional)
+
+  // Make Prettier the default formatter
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // Format + ESLint fix when the file saves (manual OR auto)
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "always",
+    "source.fixAll.eslint": "always"
+  },
+
+  // ESLint extension settings
+  "eslint.alwaysShowStatus": true,
+  "eslint.validate": ["javascript"],
+  "eslint.workingDirectories": [{ "mode": "auto" }]
+}
